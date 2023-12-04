@@ -1,60 +1,48 @@
-"""Dynamic grid."""
-import numpy as np
-import time
-import pygame
+"""Grid containing blue (-1) or red (1) squares."""
+
+import enum
+import functools
 import random
-from scipy import signal
+import time
 
-def sigmoid(x, s):
-    return 1/(1 + np.exp(-s*x))
+import agent as agent_lib
+import numpy as np
+import pygame
+import scipy.signal
 
-class Grid:
-    def __init__(self, n: int):
-        self.n = n
-        self.data = np.random.uniform(0, 1, (n,n))
-        self.already_init_draw = False
 
-        # Filtre aléatoire
-        # self.theta = np.random.normal(0, 5, (3,3,))
+class Side(enum.IntEnum):
+    """Gives a semantic meaning to the values in the grid."""
 
-        # Filtre donnant la somme des voisins
-        self.theta = np.matrix([[1,1,1], [1,0,1], [1,1,1]])
+    RED = 1
+    BLUE = -1
 
-    def set_data(self, data: np.ndarray):
-        self.data = data
 
-    def update(self, soft_strength: float = np.inf, min_n: float=2, max_n: float=3) -> None:
-        """Update the values of the grid.
+class Grid(np.ndarray):
+    """A numpy array with an extra update function, to update the values."""
 
-        This function applies a convolution filter to the grid, then an
-        activation function. This activation can either be a heaviside or a
-        sigmoid, depending on the value of 'soft'.
-        Args:
-            soft_strength: if np.inf, use heaviside, else use sigmoid with the
-                given strength
-            min_n: the minimum number of neighbours needed to stay alive
-            max_n: the maximum number of neighbours needed to stay alive
-        """
-        self.data = signal.convolve2d(self.data, self.theta, mode="same", boundary="wrap")
-        self.data = self._activation(self.data, soft=soft_strength, min_n=min_n, max_n=max_n)
+    def __init__(self, *args, dtype: type(np.int8) = None, **kwargs):
+        if dtype != np.int8:
+            raise ValueError(f'The grid should have the type np.int8. Got {dtype}.')
 
-    def _activation(self, v, soft, min_n, max_n):
-        f = (lambda x: np.heaviside(x, 1)) if soft is np.inf else (lambda x: sigmoid(x, soft))
-        return f(v-min_n) * (1 - f(v-max_n))
+    def update_swap(self, actions: np.ndarray, agent_types: np.ndarray, agent_positions: np.ndarray) -> None:
+        """Updates the agent positions on the grid using their actions."""
+        for action, agent_type, (x, y) in zip(actions, agent_types, agent_positions):
+            if action == agent_lib.Action.SWAP:
+                self[x, y] += int(agent_type)
+                self[x, y] = np.clip(self[x, y], -1, 1)
 
-    def init_draw(self):
-        self.screen_size = 1000
-        self.screen = pygame.display.set_mode((self.screen_size, self.screen_size))
-        pygame.display.set_caption("Life game")
-        self.already_init_draw = True
-
-    def draw(self):
-        if(self.already_init_draw == False):
-            self.init_draw()
-
-        gridsize = (self.screen_size//self.n)
-        for i in range(self.n):
-            for j in range(self.n):
-                color = (self.data[i,j]*255,self.data[i,j]*255,self.data[i,j]*255)
-                pygame.draw.rect(self.screen, color, (j*gridsize,i*gridsize, gridsize, gridsize))
-        pygame.display.update()
+    def update_gol(self) -> None:
+        """Updates the grid, following the rule of the game of life."""
+        full_neighbors = functools.partial(
+            scipy.signal.convolve2d,
+            mode='same',
+            boundary='wrap',
+            in2=np.ones((3, 3)),
+        )
+        red_neighbors = full_neighbors(self > 0) - (self > 0)
+        blue_neighbors = full_neighbors(self < 0) - (self < 0)
+        red_update = (red_neighbors == 3) | ((self > 0) & (red_neighbors == 2))
+        blue_update = (blue_neighbors == 3) | ((self < 0) & (blue_neighbors == 2))
+        new_grid = (red_update.astype(int) - blue_update.astype(int))
+        self[:, :] = new_grid
