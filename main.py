@@ -321,7 +321,8 @@ def main_train(num_steps: int):
 
 
 # Train agents and then visualize.
-env_state, model_params = main_train(num_steps=5)
+# Reduce the number of training steps to visualize the game quickly.
+env_state, model_params = main_train(num_steps=10_000)
 visualize_simul(
     env_state=env_state,
     model_params=model_params,
