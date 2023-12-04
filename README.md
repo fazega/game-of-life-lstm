@@ -29,3 +29,7 @@ advantage (i.e. REINFORCE).
 ## Usage
 
 Launch a training + visualization with `python3 main.py`.
+
+## Example
+
+https://github.com/fazega/game-of-life-lstm/assets/2405528/9f2b4a80-74e4-4707-a5ff-3baade1a4ae2
