@@ -60,7 +60,7 @@ class EnvironmentState:
 @dataclasses.dataclass
 class TrainConfig:
     """Config for the training script.
-    
+
     Attributes:
         batch_size: Batch size to use for training.
         learning_rate: Used by Adam.
@@ -81,7 +81,7 @@ def train_simul(
     num_steps: int = 100,
 ) -> None:
     """Trains the model using some agents in the environment.
-    
+
     We make one gradient pass per environment step, once the training data
     pool is big enough.
 
@@ -99,9 +99,11 @@ def train_simul(
     optimizer_state = optimizer.init(model_params)
     loss_fn = network_lib.make_loss_fn(model)
     grad_fn = jax.value_and_grad(loss_fn)
-    
+
     @jax.jit
-    def update_fn(model_params, optimizer_state, inputs, states, normalized_future_scores, actions):
+    def update_fn(
+        model_params, optimizer_state, inputs, states, normalized_future_scores, actions
+    ):
         """Updates some parameters using gradients on the passed data."""
         loss, grads = grad_fn(
             model_params, inputs, states, normalized_future_scores, actions
@@ -114,14 +116,14 @@ def train_simul(
     last_red_scores, last_blue_scores = [], []
     train_data = []
     for step in range(num_steps):
-        # Get the egocentric views of the agents.
+        # Get the egocentric views of the agents.
         views = agent_lib.egocentric_views(
             agent_positions=env_state.agent_positions,
             grid=env_state.grid,
             size=_EGOCENTRIC_SIZE,
         )
 
-        # Retrieve the policies and sample random actions.
+        # Retrieve the policies and sample random actions.
         log_probs, new_states = model.apply(
             model_params, None, views, env_state.agent_states
         )
@@ -129,21 +131,25 @@ def train_simul(
         oh_actions = rng.multinomial(n=1, pvals=probs, size=(len(log_probs),))
         actions = np.argmax(oh_actions, axis=-1)
 
-        # Update training data with inputs and action taken.
+        # Update training data with inputs and action taken.
         for i in range(len(env_state.agent_positions)):
             train_data.append(
-                [views[i],
-                tree.map_structure(lambda x: x[i], env_state.agent_states),
-                0.,
-                actions[i]]
+                [
+                    views[i],
+                    tree.map_structure(lambda x: x[i], env_state.agent_states),
+                    0.0,
+                    actions[i],
+                ]
             )
-        
-        # Update the environment with the actions.
+
+        # Update the environment with the actions.
         env_state.update_agent_positions(actions)
-        env_state.grid.update_swap(actions, env_state.agent_types, env_state.agent_positions)
+        env_state.grid.update_swap(
+            actions, env_state.agent_types, env_state.agent_positions
+        )
         env_state.grid.update_gol()
 
-        # Retrieving the scores.
+        # Retrieving the scores.
         red_sum = float(np.sum(env_state.grid == 1))
         blue_sum = float(np.sum(env_state.grid == -1))
         red_score = red_sum / (red_sum + blue_sum)
@@ -160,7 +166,7 @@ def train_simul(
                 else:
                     train_data[index][2] = normalized_blue_score
 
-        # Actual training.
+        # Actual training.
         loss = None
         if len(train_data[:-total_delay]) >= train_config.batch_size:
             batch = random.choices(
@@ -169,28 +175,36 @@ def train_simul(
             )
             inputs, states, normalized_future_scores, actions = zip(*batch)
             inputs = np.stack(inputs, axis=0)
-            states = hk.LSTMState(hidden=np.stack([x.hidden for x in states]),
-                                  cell=np.stack([x.cell for x in states]))
+            states = hk.LSTMState(
+                hidden=np.stack([x.hidden for x in states]),
+                cell=np.stack([x.cell for x in states]),
+            )
             normalized_future_scores = np.array(normalized_future_scores)
-            # Function to put the scores between -infinity and +infinity.
+            # Function to put the scores between -infinity and +infinity.
             normalized_future_scores = 5 * np.tan(
-                np.clip(normalized_future_scores, -0.999, 0.999) * (np.pi/2),
+                np.clip(normalized_future_scores, -0.999, 0.999) * (np.pi / 2),
             )
             actions = np.array(actions, dtype=int)
             loss, model_params, optimizer_state = update_fn(
-                model_params, optimizer_state, inputs, states,
-                normalized_future_scores, actions
+                model_params,
+                optimizer_state,
+                inputs,
+                states,
+                normalized_future_scores,
+                actions,
             )
 
-        # Logging.
+        # Logging.
         if step % 100 == 0:
-            print(f'Step: {step}, Scores: {red_score*100:.1f}%'
-                  f'-{blue_score*100:.1f}%, Loss: {loss}')
-        
-        # Stop the loop when one of the two teams has no square left.
-        if red_score == 0. or blue_score == 0.:
+            print(
+                f"Step: {step}, Scores: {red_score*100:.1f}%"
+                f"-{blue_score*100:.1f}%, Loss: {loss}"
+            )
+
+        # Stop the loop when one of the two teams has no square left.
+        if red_score == 0.0 or blue_score == 0.0:
             break
-        
+
     return (env_state, model_params)
 
 
@@ -203,14 +217,13 @@ def visualize_simul(
     model = hk.transform(network_lib.policy)
     size_grid = len(env_state.grid)
 
-    # Initialize the pygame screen.
+    # Initialize the pygame screen.
     pygame.init()
-    screen = pygame.display.set_mode(
-        (_SCREEN_SIZE, _SCREEN_SIZE))
+    screen = pygame.display.set_mode((_SCREEN_SIZE, _SCREEN_SIZE))
     pygame.display.set_caption("Life game")
-    my_font = pygame.font.SysFont('Arial', 16, True)
+    my_font = pygame.font.SysFont("Arial", 16, True)
 
-    # Used for logging.
+    # Used for logging.
     last_red_scores, last_blue_scores = [], []
 
     running = True
@@ -220,7 +233,7 @@ def visualize_simul(
             if event.type == pygame.QUIT:
                 running = False
 
-        gridsize = (_SCREEN_SIZE//size_grid)
+        gridsize = _SCREEN_SIZE // size_grid
         for i in range(size_grid):
             for j in range(size_grid):
                 pixel = env_state.grid[i, j]
@@ -230,35 +243,47 @@ def visualize_simul(
                     color = (255, 0, 0)
                 elif pixel == grid_lib.Side.BLUE:
                     color = (0, 0, 255)
-                pygame.draw.rect(screen, color, (j*gridsize,i*gridsize, gridsize, gridsize))
+                pygame.draw.rect(
+                    screen, color, (j * gridsize, i * gridsize, gridsize, gridsize)
+                )
 
-        for agent_type, agent_pos in zip(env_state.agent_types, env_state.agent_positions):
+        for agent_type, agent_pos in zip(
+            env_state.agent_types, env_state.agent_positions
+        ):
             x, y = agent_pos
             color = (255, 0, 0) if agent_type == grid_lib.Side.RED else (0, 0, 255)
-            pygame.draw.circle(screen, color, (y*gridsize+gridsize/2, x*gridsize+gridsize/2), gridsize//2, 2)
+            pygame.draw.circle(
+                screen,
+                color,
+                (y * gridsize + gridsize / 2, x * gridsize + gridsize / 2),
+                gridsize // 2,
+                2,
+            )
 
-        # Update.
-        # Get the egocentric views of the agents.
+        # Update.
+        # Get the egocentric views of the agents.
         views = agent_lib.egocentric_views(
             agent_positions=env_state.agent_positions,
             grid=env_state.grid,
             size=_EGOCENTRIC_SIZE,
         )
 
-        # Retrieve the policies and sample random actions.
+        # Retrieve the policies and sample random actions.
         log_probs, new_states = model.apply(
             model_params, None, views, env_state.agent_states
         )
         probs = np.exp(log_probs)
         oh_actions = rng.multinomial(n=1, pvals=probs, size=(len(log_probs),))
         actions = np.argmax(oh_actions, axis=-1)
-        
-        # Update the environment with the actions.
+
+        # Update the environment with the actions.
         env_state.update_agent_positions(actions)
-        env_state.grid.update_swap(actions, env_state.agent_types, env_state.agent_positions)
+        env_state.grid.update_swap(
+            actions, env_state.agent_types, env_state.agent_positions
+        )
         env_state.grid.update_gol()
 
-        # Display the scores.
+        # Display the scores.
         red_sum = float(np.sum(env_state.grid == 1))
         blue_sum = float(np.sum(env_state.grid == -1))
         red_score = red_sum / (red_sum + blue_sum)
@@ -273,17 +298,32 @@ def visualize_simul(
         if len(last_blue_scores) >= max_scores:
             last_blue_scores.pop(0)
 
-        pygame.draw.rect(screen, (0, 0, 0), (_SCREEN_SIZE - 250, 10, delta * max_scores, height))
-        pygame.draw.rect(screen, (255, 255, 255), (_SCREEN_SIZE - 250, 10, delta * max_scores, height), width=2)
+        pygame.draw.rect(
+            screen, (0, 0, 0), (_SCREEN_SIZE - 250, 10, delta * max_scores, height)
+        )
+        pygame.draw.rect(
+            screen,
+            (255, 255, 255),
+            (_SCREEN_SIZE - 250, 10, delta * max_scores, height),
+            width=2,
+        )
         if len(last_red_scores) >= 2:
-            red_scores_coords = [(_SCREEN_SIZE - 250 + i * delta, 10 + height * (1 - score)) for i, score in enumerate(last_red_scores)]
+            red_scores_coords = [
+                (_SCREEN_SIZE - 250 + i * delta, 10 + height * (1 - score))
+                for i, score in enumerate(last_red_scores)
+            ]
             pygame.draw.lines(screen, (255, 0, 0), False, red_scores_coords, width=2)
         if len(last_blue_scores) >= 2:
-            blue_scores_coords = [(_SCREEN_SIZE - 250 + i * delta, 10 + height * (1 - score)) for i, score in enumerate(last_blue_scores)]
+            blue_scores_coords = [
+                (_SCREEN_SIZE - 250 + i * delta, 10 + height * (1 - score))
+                for i, score in enumerate(last_blue_scores)
+            ]
             pygame.draw.lines(screen, (0, 0, 255), False, blue_scores_coords, width=2)
-        red_text = my_font.render(f'Red: {red_score*100:.1f}%', False, (255, 255, 255))
+        red_text = my_font.render(f"Red: {red_score*100:.1f}%", False, (255, 255, 255))
         screen.blit(red_text, (_SCREEN_SIZE - 100, 10))
-        blue_text = my_font.render(f'Blue: {blue_score*100:.1f}%', False, (255, 255, 255))
+        blue_text = my_font.render(
+            f"Blue: {blue_score*100:.1f}%", False, (255, 255, 255)
+        )
         screen.blit(blue_text, (_SCREEN_SIZE - 100, 40))
         pygame.display.update()
 
@@ -299,10 +339,19 @@ def main_train(num_steps: int):
     N = 60
     grid = np.random.randint(-1, 2, (N, N), dtype=np.int8).view(grid_lib.Grid)
     num_agents = 10
-    agent_positions = np.array([(random.randint(0, N-1), random.randint(0, N-1)) for _ in range(num_agents)])
-    agent_types = np.array([int(random.choice(list(grid_lib.Side))) for _ in range(num_agents)])
-    zero_state = hk.LSTMState(hidden=np.zeros([network_lib.LSTM_SIZE]), cell=np.zeros([network_lib.LSTM_SIZE]))
-    agent_states = tree.map_structure(lambda x: np.stack([x]*num_agents), zero_state)
+    agent_positions = np.array(
+        [
+            (random.randint(0, N - 1), random.randint(0, N - 1))
+            for _ in range(num_agents)
+        ]
+    )
+    agent_types = np.array(
+        [int(random.choice(list(grid_lib.Side))) for _ in range(num_agents)]
+    )
+    zero_state = hk.LSTMState(
+        hidden=np.zeros([network_lib.LSTM_SIZE]), cell=np.zeros([network_lib.LSTM_SIZE])
+    )
+    agent_states = tree.map_structure(lambda x: np.stack([x] * num_agents), zero_state)
     env_state = EnvironmentState(
         grid=grid,
         agent_positions=agent_positions,
@@ -310,7 +359,9 @@ def main_train(num_steps: int):
         agent_states=agent_states,
     )
     model = hk.transform(network_lib.policy)
-    model_params = model.init(jax.random.PRNGKey(0), np.zeros((_EGOCENTRIC_SIZE**2,)), zero_state)
+    model_params = model.init(
+        jax.random.PRNGKey(0), np.zeros((_EGOCENTRIC_SIZE**2,)), zero_state
+    )
 
     return train_simul(
         env_state=env_state,
@@ -320,12 +371,10 @@ def main_train(num_steps: int):
     )
 
 
-# Train agents and then visualize.
-# Reduce the number of training steps to visualize the game quickly.
+# Train agents and then visualize.
+# Reduce the number of training steps to visualize the game quickly.
 env_state, model_params = main_train(num_steps=10_000)
 visualize_simul(
     env_state=env_state,
     model_params=model_params,
 )
-
-

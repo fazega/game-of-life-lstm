@@ -23,9 +23,11 @@ class Grid(np.ndarray):
 
     def __init__(self, *args, dtype: type(np.int8) = None, **kwargs):
         if dtype != np.int8:
-            raise ValueError(f'The grid should have the type np.int8. Got {dtype}.')
+            raise ValueError(f"The grid should have the type np.int8. Got {dtype}.")
 
-    def update_swap(self, actions: np.ndarray, agent_types: np.ndarray, agent_positions: np.ndarray) -> None:
+    def update_swap(
+        self, actions: np.ndarray, agent_types: np.ndarray, agent_positions: np.ndarray
+    ) -> None:
         """Updates the agent positions on the grid using their actions."""
         for action, agent_type, (x, y) in zip(actions, agent_types, agent_positions):
             if action == agent_lib.Action.SWAP:
@@ -36,13 +38,13 @@ class Grid(np.ndarray):
         """Updates the grid, following the rule of the game of life."""
         full_neighbors = functools.partial(
             scipy.signal.convolve2d,
-            mode='same',
-            boundary='wrap',
+            mode="same",
+            boundary="wrap",
             in2=np.ones((3, 3)),
         )
         red_neighbors = full_neighbors(self > 0) - (self > 0)
         blue_neighbors = full_neighbors(self < 0) - (self < 0)
         red_update = (red_neighbors == 3) | ((self > 0) & (red_neighbors == 2))
         blue_update = (blue_neighbors == 3) | ((self < 0) & (blue_neighbors == 2))
-        new_grid = (red_update.astype(int) - blue_update.astype(int))
+        new_grid = red_update.astype(int) - blue_update.astype(int)
         self[:, :] = new_grid

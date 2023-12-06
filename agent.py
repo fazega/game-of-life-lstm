@@ -18,7 +18,7 @@ class Action(enum.IntEnum):
 
 def egocentric_views(
     agent_positions: np.ndarray,
-    # Not using the grid_lib.Grid type here as that would could circular deps.
+    # Not using the grid_lib.Grid type here as that would could circular deps.
     grid: np.ndarray,
     size: int,
 ) -> np.ndarray:
@@ -26,10 +26,8 @@ def egocentric_views(
     views = np.zeros((len(agent_positions), size**2))
     for i, (x, y) in enumerate(agent_positions):
         flattened_view = grid[
-            x - size//2:x + size//2 + 1,
-            y - size//2:y + size//2 + 1
+            x - size // 2 : x + size // 2 + 1, y - size // 2 : y + size // 2 + 1
         ].flatten()
-        # Cutting the inputs outside the screen.
-        views[i][:len(flattened_view)] = flattened_view
+        # Cutting the inputs outside the screen.
+        views[i][: len(flattened_view)] = flattened_view
     return views
-    
