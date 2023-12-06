@@ -79,7 +79,7 @@ def visualize(
         )
 
         # Retrieve the policies and sample random actions.
-        log_probs, new_states = model.apply(
+        log_probs, env_state.agent_states = model.apply(
             model_params, None, views, env_state.agent_states
         )
         probs = np.exp(log_probs)
