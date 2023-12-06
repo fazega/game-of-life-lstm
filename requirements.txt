@@ -1,0 +1,7 @@
+dm-tree
+dm-haiku
+jax
+numpy
+optax
+scipy
+tqdm
