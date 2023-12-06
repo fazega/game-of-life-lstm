@@ -1,7 +1,6 @@
 """Training function for the agents."""
 
 import dataclasses
-import functools
 import operator
 import random
 
