@@ -2,6 +2,7 @@ dm-tree
 dm-haiku
 jax
 numpy
+pygame
 optax
 scipy
 tqdm
