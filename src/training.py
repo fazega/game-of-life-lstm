@@ -101,7 +101,7 @@ def train(
                 [
                     views[i],
                     tree.map_structure(
-                        functools.partial(operator.itemgetter, item=i),
+                        operator.itemgetter(i),
                         env_state.agent_states,
                     ),
                     0.0,
