@@ -6,7 +6,7 @@ import functools
 import numpy as np
 import scipy.signal
 
-import agent as agent_lib
+import src.agent as agent_lib
 
 
 class Side(enum.IntEnum):

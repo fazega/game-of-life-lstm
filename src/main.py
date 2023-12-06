@@ -7,11 +7,11 @@ import jax
 import numpy as np
 import tree
 
-import env as env_lib
-import grid as grid_lib
-import network as network_lib
-import training
-import visualization
+import src.env as env_lib
+import src.grid as grid_lib
+import src.network as network_lib
+import src.training as training_lib
+import src.visualization as vis_lib
 
 
 def main_train(num_steps: int):
@@ -50,10 +50,13 @@ def main_train(num_steps: int):
         zero_state,
     )
 
-    return training.train(
+    return training_lib.train(
         env_state=env_state,
         model_params=model_params,
-        train_config=training.TrainConfig(batch_size=32, learning_rate=1e-4),
+        train_config=training_lib.TrainConfig(
+            batch_size=32,
+            learning_rate=1e-4,
+        ),
         num_steps=num_steps,
     )
 
@@ -62,7 +65,7 @@ def train_and_visualize():
     """Trains some agents and visualize them in the environment, once trained."""
     # Reduce the number of training steps to visualize the game quickly.
     env_state, model_params = main_train(num_steps=10_000)
-    visualization.visualize(
+    vis_lib.visualize(
         env_state=env_state,
         model_params=model_params,
     )

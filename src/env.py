@@ -4,8 +4,8 @@ import dataclasses
 
 import numpy as np
 
-import agent as agent_lib
-import grid as grid_lib
+import src.agent as agent_lib
+import src.grid as grid_lib
 
 
 EGOCENTRIC_SIZE = 5

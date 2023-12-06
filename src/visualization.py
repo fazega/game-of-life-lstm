@@ -4,10 +4,10 @@ import haiku as hk
 import numpy as np
 import pygame
 
-import agent as agent_lib
-import env as env_lib
-import grid as grid_lib
-import network as network_lib
+import src.agent as agent_lib
+import src.env as env_lib
+import src.grid as grid_lib
+import src.network as network_lib
 
 
 _EGOCENTRIC_SIZE = 5

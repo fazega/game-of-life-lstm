@@ -7,7 +7,7 @@ import jax.nn as jnn
 import jax.numpy as jnp
 import haiku as hk
 
-import agent as agent_lib
+import src.agent as agent_lib
 
 
 LSTM_SIZE = 64
