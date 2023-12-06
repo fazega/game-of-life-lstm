@@ -37,9 +37,9 @@ def make_loss_fn(model: hk.Transformed) -> Any:
         """Returns a classical policy gradient (REINFORCE) loss."""
         # normalized means -1 for 100% blue, 1 for 100% red, 0 in the middle
         log_probs, _ = model.apply(params, None, inputs, states)
-        action_log_probs = jnp.take_along_axis(log_probs, actions[:, None], axis=1)[
-            :, 0
-        ]
+        action_log_probs = jnp.take_along_axis(
+            log_probs, actions[:, None], axis=1
+        )[:, 0]
         return -jnp.mean(normalized_future_scores * action_log_probs)
 
     return loss_fn

@@ -2,13 +2,11 @@
 
 import enum
 import functools
-import random
-import time
+
+import numpy as np
+import scipy.signal
 
 import agent as agent_lib
-import numpy as np
-import pygame
-import scipy.signal
 
 
 class Side(enum.IntEnum):
@@ -22,14 +20,22 @@ class Grid(np.ndarray):
     """A numpy array with an extra update function, to update the values."""
 
     def __init__(self, *args, dtype: type(np.int8) = None, **kwargs):
+        super().__init__(*args, **kwargs)
         if dtype != np.int8:
-            raise ValueError(f"The grid should have the type np.int8. Got {dtype}.")
+            raise ValueError(
+                f"The grid should have the type np.int8. Got {dtype}."
+            )
 
     def update_swap(
-        self, actions: np.ndarray, agent_types: np.ndarray, agent_positions: np.ndarray
+        self,
+        actions: np.ndarray,
+        agent_types: np.ndarray,
+        agent_positions: np.ndarray,
     ) -> None:
         """Updates the agent positions on the grid using their actions."""
-        for action, agent_type, (x, y) in zip(actions, agent_types, agent_positions):
+        for action, agent_type, (x, y) in zip(
+            actions, agent_types, agent_positions
+        ):
             if action == agent_lib.Action.SWAP:
                 self[x, y] += int(agent_type)
                 self[x, y] = np.clip(self[x, y], -1, 1)
@@ -45,6 +51,8 @@ class Grid(np.ndarray):
         red_neighbors = full_neighbors(self > 0) - (self > 0)
         blue_neighbors = full_neighbors(self < 0) - (self < 0)
         red_update = (red_neighbors == 3) | ((self > 0) & (red_neighbors == 2))
-        blue_update = (blue_neighbors == 3) | ((self < 0) & (blue_neighbors == 2))
+        blue_update = (blue_neighbors == 3) | (
+            (self < 0) & (blue_neighbors == 2)
+        )
         new_grid = red_update.astype(int) - blue_update.astype(int)
         self[:, :] = new_grid

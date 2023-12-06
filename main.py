@@ -1,19 +1,13 @@
 """Main file to launch the program."""
 
-import copy
 import dataclasses
-import enum
-import numpy as np
 import random
+
+import haiku as hk
+import jax
+import numpy as np
 import optax
 import pygame
-import time
-from scipy import signal
-
-import jax
-import jax.nn as jnn
-import jax.numpy as jnp
-import haiku as hk
 import tree
 
 import agent as agent_lib
@@ -44,8 +38,11 @@ class EnvironmentState:
     agent_states: np.ndarray
 
     def update_agent_positions(self, actions: np.ndarray) -> None:
+        """Updates agent positions in place given actions."""
         n = len(self.grid)
-        for i, (action, (x, y)) in enumerate(zip(actions, self.agent_positions)):
+        for i, (action, (x, y)) in enumerate(
+            zip(actions, self.agent_positions)
+        ):
             match action:
                 case agent_lib.Action.UP:
                     self.agent_positions[i] = ((x + 1) % n, y)
@@ -102,7 +99,12 @@ def train_simul(
 
     @jax.jit
     def update_fn(
-        model_params, optimizer_state, inputs, states, normalized_future_scores, actions
+        model_params,
+        optimizer_state,
+        inputs,
+        states,
+        normalized_future_scores,
+        actions,
     ):
         """Updates some parameters using gradients on the passed data."""
         loss, grads = grad_fn(
@@ -113,7 +115,6 @@ def train_simul(
         )
         return loss, new_params, new_optimizer_state
 
-    last_red_scores, last_blue_scores = [], []
     train_data = []
     for step in range(num_steps):
         # Get the egocentric views of the agents.
@@ -244,14 +245,18 @@ def visualize_simul(
                 elif pixel == grid_lib.Side.BLUE:
                     color = (0, 0, 255)
                 pygame.draw.rect(
-                    screen, color, (j * gridsize, i * gridsize, gridsize, gridsize)
+                    screen,
+                    color,
+                    (j * gridsize, i * gridsize, gridsize, gridsize),
                 )
 
         for agent_type, agent_pos in zip(
             env_state.agent_types, env_state.agent_positions
         ):
             x, y = agent_pos
-            color = (255, 0, 0) if agent_type == grid_lib.Side.RED else (0, 0, 255)
+            color = (
+                (255, 0, 0) if agent_type == grid_lib.Side.RED else (0, 0, 255)
+            )
             pygame.draw.circle(
                 screen,
                 color,
@@ -299,7 +304,9 @@ def visualize_simul(
             last_blue_scores.pop(0)
 
         pygame.draw.rect(
-            screen, (0, 0, 0), (_SCREEN_SIZE - 250, 10, delta * max_scores, height)
+            screen,
+            (0, 0, 0),
+            (_SCREEN_SIZE - 250, 10, delta * max_scores, height),
         )
         pygame.draw.rect(
             screen,
@@ -312,14 +319,20 @@ def visualize_simul(
                 (_SCREEN_SIZE - 250 + i * delta, 10 + height * (1 - score))
                 for i, score in enumerate(last_red_scores)
             ]
-            pygame.draw.lines(screen, (255, 0, 0), False, red_scores_coords, width=2)
+            pygame.draw.lines(
+                screen, (255, 0, 0), False, red_scores_coords, width=2
+            )
         if len(last_blue_scores) >= 2:
             blue_scores_coords = [
                 (_SCREEN_SIZE - 250 + i * delta, 10 + height * (1 - score))
                 for i, score in enumerate(last_blue_scores)
             ]
-            pygame.draw.lines(screen, (0, 0, 255), False, blue_scores_coords, width=2)
-        red_text = my_font.render(f"Red: {red_score*100:.1f}%", False, (255, 255, 255))
+            pygame.draw.lines(
+                screen, (0, 0, 255), False, blue_scores_coords, width=2
+            )
+        red_text = my_font.render(
+            f"Red: {red_score*100:.1f}%", False, (255, 255, 255)
+        )
         screen.blit(red_text, (_SCREEN_SIZE - 100, 10))
         blue_text = my_font.render(
             f"Blue: {blue_score*100:.1f}%", False, (255, 255, 255)
@@ -349,9 +362,12 @@ def main_train(num_steps: int):
         [int(random.choice(list(grid_lib.Side))) for _ in range(num_agents)]
     )
     zero_state = hk.LSTMState(
-        hidden=np.zeros([network_lib.LSTM_SIZE]), cell=np.zeros([network_lib.LSTM_SIZE])
+        hidden=np.zeros([network_lib.LSTM_SIZE]),
+        cell=np.zeros([network_lib.LSTM_SIZE]),
     )
-    agent_states = tree.map_structure(lambda x: np.stack([x] * num_agents), zero_state)
+    agent_states = tree.map_structure(
+        lambda x: np.stack([x] * num_agents), zero_state
+    )
     env_state = EnvironmentState(
         grid=grid,
         agent_positions=agent_positions,
