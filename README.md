@@ -71,4 +71,9 @@ Launch a training + visualization with `python3 main.py`.
 
 ## Example
 
+Small circles are (random) agents. Scores in % are
+(number of cells of color X) / (number of red cells + number of blue cells), the
+relative part of the map covered by the team. The plot shows the scores over the
+last few seconds.
+
 https://github.com/fazega/game-of-life-lstm/assets/2405528/9f2b4a80-74e4-4707-a5ff-3baade1a4ae2
