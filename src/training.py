@@ -93,6 +93,7 @@ def train(
         log_probs, env_state.agent_states = model.apply(
             model_params, None, views, env_state.agent_states
         )
+        print(np.mean(np.sum(env_state.agent_states.hidden**2, axis=-1)))
         probs = np.exp(log_probs)
         mean_entropy = np.mean(-probs * log_probs)
         oh_actions = rng.multinomial(n=1, pvals=probs, size=(len(log_probs),))

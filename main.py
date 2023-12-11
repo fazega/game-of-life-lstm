@@ -5,7 +5,6 @@ import random
 import haiku as hk
 import jax
 import numpy as np
-import tree
 import wandb
 
 import src.env as env_lib
@@ -33,12 +32,9 @@ def main_train(num_steps: int):
     agent_types = np.array(
         [int(random.choice(list(grid_lib.Side))) for _ in range(num_agents)]
     )
-    zero_state = hk.LSTMState(
-        hidden=np.zeros([network_lib.LSTM_SIZE]),
-        cell=np.zeros([network_lib.LSTM_SIZE]),
-    )
-    agent_states = tree.map_structure(
-        lambda x: np.stack([x] * num_agents), zero_state
+    agent_states = hk.LSTMState(
+        hidden=np.zeros((num_agents, network_lib.LSTM_SIZE)),
+        cell=np.zeros((num_agents, network_lib.LSTM_SIZE)),
     )
     env_state = env_lib.EnvironmentState(
         grid=grid,
@@ -50,7 +46,7 @@ def main_train(num_steps: int):
     model_params = model.init(
         jax.random.PRNGKey(0),
         np.zeros((env_lib.EGOCENTRIC_SIZE**2,)),
-        zero_state,
+        hk.LSTMState(hidden=agent_states.hidden[0], cell=agent_states.cell[0]),
     )
 
     return training_lib.train(

@@ -10,12 +10,14 @@ import haiku as hk
 import src.agent as agent_lib
 
 
-LSTM_SIZE = 64
+LSTM_SIZE = 8
 
 
 def policy(inputs: jax.Array, state: hk.LSTMState) -> jax.Array:
     """Returns the log-probabilities of actions."""
-    h, new_state = hk.LSTM(LSTM_SIZE)(inputs, state)
+    h = hk.Linear(64)(inputs)
+    h = jnn.gelu(h)
+    h, new_state = hk.LSTM(LSTM_SIZE)(h, state)
     h = hk.Linear(64)(h)
     h = jnn.gelu(h)
     h = hk.Linear(64)(h)

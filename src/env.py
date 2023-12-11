@@ -2,6 +2,7 @@
 
 import dataclasses
 
+import haiku as hk
 import numpy as np
 
 import src.agent as agent_lib
@@ -27,7 +28,7 @@ class EnvironmentState:
     grid: grid_lib.Grid
     agent_types: np.ndarray
     agent_positions: np.ndarray
-    agent_states: np.ndarray
+    agent_states: hk.LSTMState
 
     def update_agent_positions(self, actions: np.ndarray) -> None:
         """Updates agent positions in place given actions."""
