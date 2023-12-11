@@ -6,6 +6,7 @@ import haiku as hk
 import jax
 import numpy as np
 import tree
+import wandb
 
 import src.env as env_lib
 import src.grid as grid_lib
@@ -16,6 +17,8 @@ import src.visualization as vis_lib
 
 def main_train(num_steps: int):
     """Trains agents in the game of life, starting with random."""
+    wandb.init(project="game-of-life-lstm")
+
     grid_size = 60
     grid = np.random.randint(-1, 2, (grid_size, grid_size), dtype=np.int8).view(
         grid_lib.Grid

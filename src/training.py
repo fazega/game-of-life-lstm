@@ -10,6 +10,7 @@ import haiku as hk
 import numpy as np
 import optax
 import tree
+import wandb
 
 import src.agent as agent_lib
 import src.env as env_lib
@@ -93,6 +94,7 @@ def train(
             model_params, None, views, env_state.agent_states
         )
         probs = np.exp(log_probs)
+        mean_entropy = np.mean(-probs * log_probs)
         oh_actions = rng.multinomial(n=1, pvals=probs, size=(len(log_probs),))
         actions = np.argmax(oh_actions, axis=-1)
 
@@ -166,11 +168,21 @@ def train(
         if step % 100 == 0:
             print(
                 f"Step: {step}, Scores: {red_score*100:.1f}%"
-                f"-{blue_score*100:.1f}%, Loss: {loss}"
+                f"-{blue_score*100:.1f}%, Loss: {loss}, Entropy: {mean_entropy}"
+            )
+            wandb.log(
+                {
+                    "blue_score": blue_score,
+                    "red_score": red_score,
+                    "loss": loss,
+                    "entropy": mean_entropy,
+                }
             )
 
         # Reset the env if one team has no squares left.
         if red_score == 0.0 or blue_score == 0.0:
             env_state = copy.deepcopy(init_env_state)
+
+    wandb.finish()
 
     return (env_state, model_params)
