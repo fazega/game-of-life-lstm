@@ -1,5 +1,6 @@
 """Training function for the agents."""
 
+import copy
 import dataclasses
 import operator
 import random
@@ -51,6 +52,7 @@ def train(
         train_config: Various arguments for training like lr.
         num_steps: Number of steps to do in the environment.
     """
+    init_env_state = copy.deepcopy(env_state)
     rng = np.random.default_rng(1)
     # Set up the update function.
     model = hk.transform(network_lib.policy)
@@ -167,8 +169,8 @@ def train(
                 f"-{blue_score*100:.1f}%, Loss: {loss}"
             )
 
-        # Stop the loop when one of the two teams has no square left.
+        # Reset the env if one team has no squares left.
         if red_score == 0.0 or blue_score == 0.0:
-            break
+            env_state = copy.deepcopy(init_env_state)
 
     return (env_state, model_params)
